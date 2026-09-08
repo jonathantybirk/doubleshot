@@ -1,0 +1,5 @@
+/build/
+/dist/
+/*.plist
+__pycache__/
+.DS_Store

@@ -1,0 +1,15 @@
+name: Test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: make test
+      - run: clang --analyze -std=c11 -Wall -Wextra -mmacosx-version-min=14.0 src/*.c
+      - run: python3 scripts/package.py

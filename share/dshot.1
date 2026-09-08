@@ -57,8 +57,8 @@ Lid closure removes display-awake assertions and requests display sleep,
 including connected external displays. By default the current session is locked
 and lock state is checked. Reopening re-creates assertions, including user activity.
 .SH INSTALLATION
-Run dshot install once with administrator authentication. After a CLI upgrade,
-run it again to update the protected service. Run dshot uninstall before removing
+The first run installs the helper with administrator authentication. After a CLI upgrade,
+run dshot install to update the protected service. Run dshot uninstall before removing
 the CLI. Configuration is retained.
 .SH RECOVERY
 Socket disconnect releases a lease. Otherwise five-second heartbeats maintain a

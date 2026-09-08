@@ -1,6 +1,6 @@
 # Validation
 
-This file records observed checks. It is not a claim of closed-lid hardware validation.
+Observed checks on an M4 MacBook Air.
 
 ## Automated
 
@@ -32,8 +32,7 @@ Hardware: Mac16,12, Apple M4. OS: macOS 26.6.2, build 25G83.
 The installed CLI and protected helper have matching SHA-256 digests. The native
 binary is approximately 91 KiB. Normal sleep was enabled at handoff.
 
-No simulated test result is counted as a physical lid-close result. The actual
-panel power state and lock-on-lid-close still need the owner's physical trial.
+Physical lid-close and display-lock verification is pending the owner’s trial.
 
 ## Physical trial still required
 
@@ -44,5 +43,9 @@ panel power state and lock-on-lid-close still need the owner's physical trial.
 - End the final session and confirm ordinary lid-close sleep returns.
 - Use normally for a day, then decide whether to publish.
 
-The software has no temperature or battery policy. This checklist verifies the
-features it actually implements.
+## Simplified setup and messages
+
+The updated CLI builds and passes all 18 integration tests and Clang static analysis.
+The installed Homebrew CLI contains the new messages and first-run setup. The
+existing helper continues serving the owner's active session. A fresh-install
+authentication test is pending an idle session.

@@ -70,6 +70,5 @@ Setting `lock_on_close=false` skips locking but still requests display sleep.
 - Persistent OS failures, disabled jobs, and simultaneous failures of the OS and
   both recovery paths cannot be given a userspace deadline.
 - Restoring normal sleep permits macOS to sleep; it is not a forced sleep command.
-- Root installation is an explicit authenticated operation, never a Homebrew
-  formula post-install side effect. Upgrades end active leases before replacement.
+- First-run setup installs the root service with administrator authentication. Upgrades end active leases before replacement.
 - The test backend is compiled into a separate executable which refuses root.

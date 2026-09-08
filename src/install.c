@@ -54,8 +54,12 @@ int install_main(bool uninstall, uid_t uid) {
     if (_NSGetExecutablePath(executable, &size) || !realpath(executable, resolved)) return 1;
     if (getuid() != 0) {
         char owner[32]; snprintf(owner, sizeof(owner), "%u", getuid());
-        char *args[] = {"/usr/bin/sudo", resolved, uninstall ? "uninstall" : "install", "--uid", owner, NULL};
-        execv(args[0], args); diagnostic("sudo: %s", strerror(errno)); return 1;
+        const char *script = "on run argv\n"
+            "do shell script (quoted form of item 1 of argv & \" \" & item 2 of argv & \" --uid \" & item 3 of argv) with administrator privileges\n"
+            "end run";
+        char *args[] = {"/usr/bin/osascript", "-e", (char *)script, resolved,
+                        uninstall ? "uninstall" : "install", owner, NULL};
+        execv(args[0], args); diagnostic("cannot open setup: %s", strerror(errno)); return 1;
     }
     if (!uid) { diagnostic("run install as your ordinary user, or supply --uid"); return 2; }
     if (secure_directory(paths.state) || secure_directory(paths.run) || secure_directory("/Library/PrivilegedHelperTools") || secure_directory(INSTALL_DIR)) {
@@ -73,7 +77,7 @@ int install_main(bool uninstall, uid_t uid) {
         unlink(INSTALLED); rmdir(INSTALL_DIR);
         unlink(paths.socket); unlink(paths.heartbeat); unlink(paths.owner); unlink(paths.lock);
         rmdir(paths.run); rmdir(paths.state);
-        puts("Doubleshot service removed. Owned sleep settings restored. The CLI and your config remain."); return 0;
+        puts("Doubleshot: service removed; normal sleep restored."); return 0;
     }
     if (copy_binary(resolved)) { diagnostic("cannot install helper"); return 1; }
     char owner[32]; snprintf(owner, sizeof(owner), "%u\n", uid);
@@ -98,7 +102,7 @@ int install_main(bool uninstall, uid_t uid) {
         "</dict></plist>\n", REAPER_LABEL, INSTALLED);
     if (atomic_text(reaper_plist, plist, true)) return 1;
     if (bootstrap(reaper_plist) || bootstrap(daemon_plist)) { diagnostic("launchd registration failed; rerun dshot install"); return 1; }
-    puts("Doubleshot installed. Run dshot doctor, then dshot in the terminal you want to keep active.");
+    puts("Doubleshot: helper installed.");
     return 0;
 #endif
 }

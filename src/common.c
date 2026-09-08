@@ -18,7 +18,7 @@
 
 Paths paths;
 void diagnostic(const char *format, ...) {
-    va_list ap; va_start(ap, format); fprintf(stderr, "dshot: ");
+    va_list ap; va_start(ap, format); fprintf(stderr, "Doubleshot: ");
     vfprintf(stderr, format, ap); fprintf(stderr, "\n"); va_end(ap);
 }
 void init_paths(void) {

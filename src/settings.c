@@ -7,9 +7,8 @@
 #include <unistd.h>
 
 static const char template[] =
-    "# Doubleshot settings. No daemon restart needed.\n"
+    "# Doubleshot settings.\n"
     "# Apply the caffeinate shortcut with: eval \"$(dshot shell-init zsh)\"\n"
-    "# This affects your shell only; /usr/bin/caffeinate stays unchanged.\n"
     "alias_caffeinate = false\n\n"
     "# Lock the session and request display sleep when the lid closes.\n"
     "lock_on_close = true\n";

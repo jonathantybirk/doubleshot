@@ -49,8 +49,7 @@ formula = f'''class Doubleshot < Formula
 
   def caveats
     <<~EOS
-      Set up or update the protected sleep service with:
-        dshot install
+      Run dshot to begin. First-run setup asks for administrator authentication.
 
       Before uninstalling this formula, remove the service with:
         dshot uninstall
@@ -59,7 +58,7 @@ formula = f'''class Doubleshot < Formula
 
   test do
     ENV["XDG_CONFIG_HOME"] = testpath/"config"
-    assert_match "dshot {version}", shell_output("#{{bin}}/dshot --version")
+    assert_match "Doubleshot {version}", shell_output("#{{bin}}/dshot --version")
     assert_match "invalid -t value", shell_output("#{{bin}}/dshot -t invalid 2>&1", 2)
     system bin/"dshot", "config", "init"
     config = testpath/"config/doubleshot/config.toml"

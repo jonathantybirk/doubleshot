@@ -12,14 +12,12 @@ its hold automatically, and concurrent sessions are independent.
 Upstream: https://github.com/jonathantybirk/doubleshot
 
 The formula builds from the checksummed v0.1.0 source archive, installs `dshot` and
-its man page, and has no third-party runtime dependencies. It is MIT licensed and
+its man page. It is MIT licensed and
 requires macOS 14 or later. Its primary output is a CLI, with no app bundle.
 
-Closed-lid operation requires a one-time explicit `dshot install`, which installs
-a protected root helper and launchd jobs. The formula itself never invokes sudo or
-changes system power settings. Caveats explain helper setup/update and removal.
-The optional lid-close lock uses a private macOS API; runtime checks detect missing
-support. Ordinary power assertions use Apple's installed caffeinate executable.
+The first invocation installs a protected helper and launchd jobs with administrator
+authentication. Lid-close locking uses a private macOS API. Ordinary power
+assertions use Apple's caffeinate executable.
 
 Validation to attach at submission:
 

@@ -18,9 +18,9 @@ static volatile sig_atomic_t stop_requested;
 static void handle_signal(int sig) { stop_requested = sig; }
 static void usage(void) {
     puts("Usage: dshot [-dimsu] [-t seconds] [-w pid] [--] [command [args...]]\n"
-         "       dshot install | uninstall | status | doctor\n"
+         "       dshot status | uninstall\n"
          "       dshot config [init] | shell-init [zsh|bash|fish]\n\n"
-         "Caffeinate for closed lids. The hold ends with this session.\n"
+         "Keeps your Mac awake, including with the lid closed.\n"
          "-d display awake (lid open)  -i prevent idle sleep  -m prevent disk idle\n"
          "-s prevent system sleep on AC  -u declare user activity\n"
          "-t timeout in seconds  -w stop when PID exits\n"
@@ -89,6 +89,24 @@ int client_main(int argc, char **argv) {
     int terminal = open("/dev/tty", O_RDONLY | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
     /* Do not equate terminal lifetime with parent lifetime: a shell may exec dshot. */
     int fd = connect_service();
+#ifndef DSHOT_TEST
+    if (fd < 0 && access(INSTALLED, F_OK) != 0 && errno == ENOENT) {
+        diagnostic("setting up the helper");
+        pid_t installer = fork();
+        if (installer == 0) _exit(install_main(false, getuid()));
+        int status = 0;
+        if (installer < 0) { diagnostic("cannot start setup"); return 1; }
+        pid_t done;
+        do { done = waitpid(installer, &status, 0); } while (done < 0 && errno == EINTR);
+        if (done < 0 || !WIFEXITED(status) || WEXITSTATUS(status)) return 1;
+        double deadline = now_seconds() + 5;
+        do {
+            fd = connect_service();
+            if (fd >= 0) break;
+            usleep(50000);
+        } while (now_seconds() < deadline);
+    }
+#endif
     if (fd < 0) { diagnostic("service unavailable; run dshot install first"); if (terminal >= 0) close(terminal); return 1; }
     if (do_lock && !lock_available()) { diagnostic("screen-lock API unavailable; see dshot doctor"); close(fd); return 1; }
     signal(SIGPIPE, SIG_IGN); signal(SIGINT, handle_signal); signal(SIGTERM, handle_signal); signal(SIGHUP, handle_signal);
@@ -107,7 +125,7 @@ int client_main(int argc, char **argv) {
         int error = spawn_command(argv + optind, &child);
         if (error) { diagnostic("%s: %s", argv[optind], strerror(error)); result = error == ENOENT ? 127 : 126; goto cleanup_events; }
     }
-    if (isatty(STDERR_FILENO)) diagnostic("ready; closed-lid hold active");
+    if (isatty(STDERR_FILENO)) diagnostic("keeping your Mac awake");
     double started = now_seconds(), last_heartbeat = started, last_lid_check = started;
     while (!stop_requested) {
         if (child) {

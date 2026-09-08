@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
             argv[1] = "/usr/bin/caffeinate";
             execv(argv[1], argv + 1); diagnostic("cannot execute /usr/bin/caffeinate"); return 1;
         }
-        if (!strcmp(argv[1], "--version")) { puts("dshot " VERSION); return 0; }
+        if (!strcmp(argv[1], "--version")) { puts("Doubleshot " VERSION); return 0; }
         if (!strcmp(argv[1], "--help")) { char *help[] = {argv[0], "-h", NULL}; return client_main(2, help); }
         if (!strcmp(argv[1], "_daemon") && argc == 2) return daemon_main();
         if (!strcmp(argv[1], "_reap") && argc == 2) return reaper_main();

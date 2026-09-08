@@ -12,14 +12,12 @@
 #include <unistd.h>
 
 extern char **environ;
-extern int events_start(bool lid), lid_closed(void), lock_available(void), lock_and_blank(bool should_lock);
-extern bool setting_lock(void);
+extern int events_start(bool lid), lid_closed(void), lock_available(void), lock_and_blank(void);
 static volatile sig_atomic_t stop_requested;
 static void handle_signal(int sig) { stop_requested = sig; }
 static void usage(void) {
     puts("Usage: dshot [-dimsu] [-t seconds] [-w pid] [--] [command [args...]]\n"
          "       dshot status | uninstall\n"
-         "       dshot config [init] | shell-init [zsh|bash|fish]\n\n"
          "Keeps your Mac awake, including with the lid closed.\n"
          "-d display awake (lid open)  -i prevent idle sleep  -m prevent disk idle\n"
          "-s prevent system sleep on AC  -u declare user activity\n"
@@ -82,7 +80,7 @@ int client_main(int argc, char **argv) {
     }
     size_t n = 0; for (const char *p = "dimsu"; *p; p++) if (present[(unsigned char)*p]) flags[n++] = *p;
     if (!n) flags[n++] = 'i'; flags[n] = 0;
-    bool command = optind < argc, do_lock = setting_lock();
+    bool command = optind < argc;
     if (command) { target = 0; timeout = 0; }
     uint64_t target_birth = target ? process_birth((pid_t)target) : 0;
     if (target && !target_birth) return 0;
@@ -108,7 +106,7 @@ int client_main(int argc, char **argv) {
     }
 #endif
     if (fd < 0) { diagnostic("service unavailable; run dshot install first"); if (terminal >= 0) close(terminal); return 1; }
-    if (do_lock && !lock_available()) { diagnostic("screen-lock API unavailable; see dshot doctor"); close(fd); return 1; }
+    if (!lock_available()) { diagnostic("screen-lock API unavailable; see dshot doctor"); close(fd); return 1; }
     signal(SIGPIPE, SIG_IGN); signal(SIGINT, handle_signal); signal(SIGTERM, handle_signal); signal(SIGHUP, handle_signal);
     char reply[512] = "";
     if (request(fd, "A\n", reply, sizeof(reply)) || strcmp(reply, "OK")) {
@@ -118,7 +116,7 @@ int client_main(int argc, char **argv) {
     if (closed < 0) { diagnostic("cannot read lid state"); result = 1; goto release; }
     pid_t assertion = start_assertions(flags, closed, timeout);
     if (assertion < 0) { result = 1; goto release; }
-    if (closed && lock_and_blank(do_lock)) { result = 1; goto cleanup_assertion; }
+    if (closed && lock_and_blank()) { result = 1; goto cleanup_assertion; }
     int events = events_start(true);
     pid_t child = 0;
     if (command) {
@@ -160,7 +158,7 @@ int client_main(int argc, char **argv) {
             if (timeout && remaining <= 0) break;
             unsigned long long seconds_left = timeout ? (unsigned long long)remaining + 1 : 0;
             assertion = start_assertions(flags, closed, seconds_left);
-            if (assertion < 0 || (closed && lock_and_blank(do_lock))) { result = 1; break; }
+            if (assertion < 0 || (closed && lock_and_blank())) { result = 1; break; }
         }
         if (assertion > 0 && waitpid(assertion, NULL, WNOHANG) == assertion) {
             assertion = 0;

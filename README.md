@@ -28,16 +28,5 @@ dshot -w 12345        # until a process exits
 keep the Mac awake until the last one ends. A launchd service restores sleep
 if a client crashes; a separate recovery job handles a stalled service.
 
-## Caffeinate shortcut
-
-Run `dshot config init`, set `alias_caffeinate = true` in the printed file,
-and add this to `~/.zshrc`:
-
-```sh
-eval "$(dshot shell-init zsh)"
-```
-
-Typed `caffeinate` commands then use Doubleshot. Bash and fish are also supported.
-
-See `man dshot` for settings, status, and removal. Build with `make`; test with
+See `man dshot` for options, status, and removal. Build with `make`; test with
 `make test`. [MIT license](LICENSE).

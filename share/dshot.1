@@ -7,9 +7,6 @@ dshot \- caffeinate for closed lids
 .br
 .B dshot
 install | uninstall | status | doctor
-.br
-.B dshot
-config [init] | shell-init [zsh|bash|fish]
 .SH DESCRIPTION
 Doubleshot holds a closed-lid sleep override for the duration of a command or
 terminal session. Concurrent sessions compose. A privileged service restores
@@ -41,25 +38,14 @@ End when this process exits. Ignored when a command is given.
 Terminal closure releases the hold. In tmux, detaching preserves the pane and
 its hold; closing the pane ends it. A run without a controlling terminal follows
 the client/workload lifetime. Wrapped commands keep their exit code and input/output.
-.SH CONFIGURATION
-~/.config/doubleshot/config.toml (or $XDG_CONFIG_HOME/doubleshot/config.toml):
-.PP
-.nf
-alias_caffeinate = false
-lock_on_close = true
-.fi
-.PP
-Run dshot config init to create the file. For optional zsh integration, add
-eval "$(dshot shell-init zsh)" to .zshrc. The function reads alias_caffeinate on
-each invocation; Apple's executable is unchanged.
 .SH DISPLAY
 Lid closure removes display-awake assertions and requests display sleep,
-including connected external displays. By default the current session is locked
+including connected external displays. The current session is locked
 and lock state is checked. Reopening re-creates assertions, including user activity.
 .SH INSTALLATION
 The first run installs the helper with administrator authentication. After a CLI upgrade,
 run dshot install to update the protected service. Run dshot uninstall before removing
-the CLI. Configuration is retained.
+the CLI.
 .SH RECOVERY
 Socket disconnect releases a lease. Otherwise five-second heartbeats maintain a
 twenty-second lease. launchd restarts the service; an independent reaper handles

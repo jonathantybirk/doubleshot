@@ -57,16 +57,8 @@ formula = f'''class Doubleshot < Formula
   end
 
   test do
-    ENV["XDG_CONFIG_HOME"] = testpath/"config"
     assert_match "Doubleshot {version}", shell_output("#{{bin}}/dshot --version")
     assert_match "invalid -t value", shell_output("#{{bin}}/dshot -t invalid 2>&1", 2)
-    system bin/"dshot", "config", "init"
-    config = testpath/"config/doubleshot/config.toml"
-    assert_match "alias_caffeinate = false", config.read
-    config.unlink
-    config.write "alias_caffeinate = true\\nlock_on_close = false\\n"
-    assert_match "_caffeinate", shell_output("#{{bin}}/dshot shell-init zsh")
-    assert_match "alias_caffeinate = true", shell_output("#{{bin}}/dshot config")
   end
 end
 '''

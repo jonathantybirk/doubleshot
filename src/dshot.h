@@ -34,7 +34,6 @@ int daemon_main(void);
 int reaper_main(void);
 int install_main(bool uninstall, uid_t uid);
 int client_main(int argc, char **argv);
-int settings_main(int argc, char **argv);
 int status_main(bool doctor);
 void diagnostic(const char *format, ...) __attribute__((format(printf,1,2)));
 #endif

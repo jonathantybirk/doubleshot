@@ -86,19 +86,16 @@ static bool screen_locked(void) {
     bool locked = value && CFGetTypeID(value) == CFBooleanGetTypeID() && CFBooleanGetValue(value);
     CFRelease(session); return locked;
 }
-int lock_and_blank(bool should_lock) {
+int lock_and_blank(void) {
 #ifdef DSHOT_TEST
-    (void)should_lock;
     return 0;
 #else
-    if (should_lock) {
-        if (!lock_available()) return -1;
-        lock_screen();
-        /* Lock invocation is asynchronous. Confirm session state before claiming success. */
-        double end = now_seconds() + 3;
-        while (!screen_locked() && now_seconds() < end) usleep(50000);
-        if (!screen_locked()) { diagnostic("could not verify the session locked"); return -1; }
-    }
+    if (!lock_available()) return -1;
+    lock_screen();
+    /* Lock invocation is asynchronous. Confirm session state before claiming success. */
+    double end = now_seconds() + 3;
+    while (!screen_locked() && now_seconds() < end) usleep(50000);
+    if (!screen_locked()) { diagnostic("could not verify the session locked"); return -1; }
     char *args[] = {"/usr/bin/pmset", "displaysleepnow", NULL};
     return run_bounded(args[0], args, NULL, 0, 3);
 #endif

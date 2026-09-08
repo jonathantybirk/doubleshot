@@ -28,7 +28,7 @@ class Lifecycle(unittest.TestCase):
         # macOS Unix-domain sockets have a 104-byte path limit.
         self.temp = tempfile.TemporaryDirectory(prefix="ds-", dir="/tmp")
         self.root = pathlib.Path(self.temp.name)
-        self.env = dict(os.environ, DSHOT_TEST_ROOT=str(self.root), XDG_CONFIG_HOME=str(self.root / "config"))
+        self.env = dict(os.environ, DSHOT_TEST_ROOT=str(self.root))
         (self.root / "owner").write_text(f"{os.getuid()}\n")
         self.children = []
         self.log = open(self.root / "daemon.log", "w+")
@@ -212,20 +212,6 @@ class Lifecycle(unittest.TestCase):
             self.assertEqual(self.run_cli(*args).returncode, 2)
         self.idle()
         self.assertFalse((self.root / "restore").exists())
-
-    def test_settings_and_alias(self):
-        p = self.run_cli("config", "init")
-        self.assertEqual(p.returncode, 0, p.stderr)
-        file = pathlib.Path(p.stdout.strip())
-        self.assertIn('_caffeinate', self.run_cli("shell-init", "zsh").stdout)
-        file.write_text("alias_caffeinate = true\nlock_on_close = false\n")
-        self.assertIn('command dshot _caffeinate "$@"', self.run_cli("shell-init", "zsh").stdout)
-        self.assertIn("command dshot _caffeinate $argv", self.run_cli("shell-init", "fish").stdout)
-        self.assertEqual(self.run_cli("_caffeinate", "--", "/bin/sh", "-c", "exit 19").returncode, 19)
-        self.run_cli("config", "init")
-        self.assertIn("alias_caffeinate = true", file.read_text())
-        file.write_text("misspelled = true\n")
-        self.assertEqual(self.run_cli("config").returncode, 2)
 
     def test_terminal_close(self):
         master, slave = pty.openpty()

@@ -4,7 +4,7 @@ One native executable has three runtime roles:
 
 1. **Client:** parse caffeinate-compatible arguments, hold a socket lease, monitor
    terminal/workload lifetime, run Apple's caffeinate, and handle lid events in the
-   logged-in session. Only the client reads user configuration.
+   logged-in session.
 2. **Root service:** accept one registered local user's clients, own the lease set,
    journal and apply the fixed `pmset -a disablesleep 0|1` commands, verify state,
    and release when the set becomes empty.
@@ -61,7 +61,6 @@ The client removes its display/user-active assertions on lid closure. It invokes
 `SACLockScreenImmediate` in the user's session and checks
 `CGSSessionScreenIsLocked` before requesting `pmset displaysleepnow`. This API and
 the lock-state key are private and must be physically verified after OS changes.
-Setting `lock_on_close=false` skips locking but still requests display sleep.
 
 ## Boundaries
 

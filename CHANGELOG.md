@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0
+## 1.0
 
 - Identical `doubleshot` and `dshot` commands.
 - Caffeinate-style command, timeout, PID and terminal lifetimes.

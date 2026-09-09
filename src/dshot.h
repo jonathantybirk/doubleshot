@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <limits.h>
 
-#define VERSION "0.1.0"
+#define VERSION "1.0"
 #define LABEL "io.doubleshot.daemon"
 #define REAPER_LABEL "io.doubleshot.reaper"
 #define INSTALL_DIR "/Library/PrivilegedHelperTools/io.doubleshot"

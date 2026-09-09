@@ -23,6 +23,8 @@ sanitize: build/dshot-sanitize
 install: build/dshot
 	install -d $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/share/man/man1
 	install -m 755 build/dshot $(DESTDIR)$(PREFIX)/bin/dshot
+	ln -sf dshot $(DESTDIR)$(PREFIX)/bin/doubleshot
+	ln -sf dshot.1 $(DESTDIR)$(PREFIX)/share/man/man1/doubleshot.1
 	install -m 644 share/dshot.1 $(DESTDIR)$(PREFIX)/share/man/man1/dshot.1
 clean:
 	rm -rf build

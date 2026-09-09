@@ -13,6 +13,8 @@ brew install jonathantybirk/tap/doubleshot
 dshot
 ```
 
+`doubleshot` and `dshot` are identical commands.
+
 The first run installs the helper with administrator authentication.
 
 ## Usage

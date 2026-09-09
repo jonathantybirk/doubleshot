@@ -2,6 +2,7 @@
 
 ## 0.1.0
 
+- Identical `doubleshot` and `dshot` commands.
 - Caffeinate-style command, timeout, PID and terminal lifetimes.
 - Concurrent leases with automatic client-crash recovery.
 - Root service, write-ahead recovery journal and independent launchd reaper.

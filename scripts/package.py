@@ -44,7 +44,9 @@ formula = f'''class Doubleshot < Formula
   def install
     system "make", "CC=#{{ENV.cc}}"
     bin.install "build/dshot"
+    bin.install_symlink "dshot" => "doubleshot"
     man1.install "share/dshot.1"
+    man1.install_symlink "dshot.1" => "doubleshot.1"
   end
 
   def caveats
@@ -57,8 +59,11 @@ formula = f'''class Doubleshot < Formula
   end
 
   test do
-    assert_match "Doubleshot {version}", shell_output("#{{bin}}/dshot --version")
-    assert_match "invalid -t value", shell_output("#{{bin}}/dshot -t invalid 2>&1", 2)
+    assert_equal shell_output("#{{bin}}/dshot --help"), shell_output("#{{bin}}/doubleshot --help")
+    assert_match "Doubleshot {version}", shell_output("#{{bin}}/doubleshot --version")
+    %w[dshot doubleshot].each do |command|
+      assert_match "invalid -t value", shell_output("#{{bin}}/#{{command}} -t invalid 2>&1", 2)
+    end
   end
 end
 '''

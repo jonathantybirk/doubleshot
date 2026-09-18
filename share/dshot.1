@@ -48,8 +48,8 @@ run dshot install to update the protected service. Run dshot uninstall before re
 the CLI.
 .SH RECOVERY
 Socket disconnect releases a lease. Otherwise five-second heartbeats maintain a
-twenty-second lease. launchd restarts the service; an independent reaper handles
-stalled writers. These are nominal timing values, conditional on a functioning OS.
+twenty-second lease. launchd starts the helper on connection. Recovery runs while
+a reset is pending, including after a helper crash or stall. Both exit when idle.
 A preexisting unowned SleepDisabled setting is not adopted or reset.
 .SH EXIT STATUS
 Wrapped command status is preserved. Administrative or service failures return 1;

@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <math.h>
+#include <launch.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
@@ -41,6 +42,21 @@ static int heartbeat(void) {
     char text[64]; snprintf(text, sizeof(text), "%.6f\n", now_seconds());
     return atomic_text(paths.heartbeat, text, false);
 }
+static int arm_recovery(const char *record) {
+#ifndef DSHOT_TEST
+    char *args[] = {"/bin/launchctl", "kickstart", "system/" REAPER_LABEL, NULL};
+    if (run_bounded(args[0], args, NULL, 0, 3)) return -1;
+    double deadline = now_seconds() + 5;
+    do {
+        char ready[128];
+        if (!read_text(paths.ready, ready, sizeof(ready)) && !strcmp(ready, record)) return 0;
+        usleep(20000);
+    } while (now_seconds() < deadline);
+    return -1;
+#else
+    (void)record; return 0;
+#endif
+}
 static int acquire(void) {
     if (owned) return 0;
     int baseline = power_read();
@@ -50,7 +66,7 @@ static int acquire(void) {
     /* Journal and recovery heartbeat must exist before the global mutation. */
     if (atomic_text(paths.journal, record, true)) return -1;
     owned = true;
-    if (heartbeat() || power_set(1)) { restore(); return -1; }
+    if (heartbeat() || arm_recovery(record) || power_set(1)) { restore(); return -1; }
     diagnostic("closed-lid hold enabled"); return 0;
 }
 static void drop(Client *c) { if (c->fd >= 0) close(c->fd); memset(c, 0, sizeof(*c)); c->fd = -1; }
@@ -95,7 +111,7 @@ static int privileged_context(void) {
 #ifndef DSHOT_TEST
     if (geteuid() != 0) { diagnostic("this internal mode requires root"); return -1; }
 #endif
-    if (secure_directory(paths.state) || secure_directory(paths.run)) { diagnostic("unsafe service directory"); return -1; }
+    if (secure_directory(paths.state) || secure_directory(paths.run) || secure_directory(paths.recovery)) { diagnostic("unsafe service directory"); return -1; }
     return 0;
 }
 int daemon_main(void) {
@@ -110,7 +126,9 @@ int daemon_main(void) {
     char *end; unsigned long parsed = strtoul(owner_text, &end, 10);
     if (end == owner_text || (*end != '\n' && *end) || parsed == 0 || parsed > UINT32_MAX) { close(lock); return 1; }
     uid_t owner = (uid_t)parsed;
-    int server = socket(AF_UNIX, SOCK_STREAM, 0);
+    int server;
+#ifdef DSHOT_TEST
+    server = socket(AF_UNIX, SOCK_STREAM, 0);
     if (server < 0) { close(lock); return 1; }
     fcntl(server, F_SETFD, FD_CLOEXEC); fcntl(server, F_SETFL, O_NONBLOCK);
     struct sockaddr_un addr = {.sun_family = AF_UNIX};
@@ -121,10 +139,19 @@ int daemon_main(void) {
     if (rc || chown(paths.socket, owner, (gid_t)-1) || chmod(paths.socket, 0600) || listen(server, 16)) {
         diagnostic("socket setup: %s", strerror(errno)); close(server); close(lock); return 1;
     }
+#else
+    int *sockets = NULL; size_t count = 0;
+    if (launch_activate_socket("Control", &sockets, &count) || count != 1) {
+        free(sockets); close(lock); diagnostic("socket activation failed"); return 1;
+    }
+    server = sockets[0]; free(sockets);
+    fcntl(server, F_SETFD, FD_CLOEXEC); fcntl(server, F_SETFL, O_NONBLOCK);
+    int rc = 0;
+#endif
     signal(SIGPIPE, SIG_IGN); signal(SIGTERM, stop_signal); signal(SIGINT, stop_signal);
     for (int i = 0; i < MAX_CLIENTS; i++) clients[i].fd = -1;
     int events = events_start(false);
-    double last_hb = 0, last_verify = 0;
+    double last_hb = 0, last_verify = 0, idle_since = now_seconds();
     diagnostic("service ready (version %s)", VERSION);
     while (!stopping) {
         double now = now_seconds();
@@ -136,6 +163,10 @@ int daemon_main(void) {
         if (owned && now - last_hb >= 2) {
             if (heartbeat()) { rc = 1; break; } last_hb = now;
         }
+        bool connected = false;
+        for (int i = 0; i < MAX_CLIENTS; i++) connected |= clients[i].fd >= 0;
+        if (connected || owned) idle_since = now_seconds();
+        else if (now_seconds() - idle_since >= 2) break;
         struct pollfd fds[MAX_CLIENTS + 2];
         fds[0] = (struct pollfd){server, POLLIN, 0}; fds[1] = (struct pollfd){events, POLLIN, 0};
         for (int i = 0; i < MAX_CLIENTS; i++) fds[i + 2] = (struct pollfd){clients[i].fd, POLLIN, 0};
@@ -170,7 +201,10 @@ int daemon_main(void) {
     }
     for (int i = 0; i < MAX_CLIENTS; i++) drop(&clients[i]);
     if (owned && restore()) rc = 1;
-    unlink(paths.socket); close(server); if (events >= 0) close(events); close(lock);
+#ifdef DSHOT_TEST
+    unlink(paths.socket);
+#endif
+    close(server); if (events >= 0) close(events); close(lock);
     return rc != 0;
 }
 
@@ -199,4 +233,21 @@ int reaper_main(void) {
     int result = 0;
     if (access(paths.journal, F_OK) == 0) result = restore();
     close(lock); return result ? 1 : 0;
+}
+
+/* launchd keeps this job running only while the durable recovery directory is nonempty. */
+int watchdog_main(void) {
+    if (privileged_context()) return 1;
+    char acknowledged[128] = "";
+    while (access(paths.journal, F_OK) == 0) {
+        char record[128];
+        if (!read_text(paths.journal, record, sizeof(record)) && strcmp(record, acknowledged)) {
+            if (atomic_text(paths.ready, record, false)) return 1;
+            strlcpy(acknowledged, record, sizeof(acknowledged));
+        }
+        reaper_main();
+        if (access(paths.journal, F_OK)) break;
+        sleep(1);
+    }
+    return 0;
 }

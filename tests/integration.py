@@ -84,6 +84,30 @@ class Lifecycle(unittest.TestCase):
             result.extend(s.recv(1))
         return result.decode().strip()
 
+    def test_idle_daemon_exits(self):
+        self.assertEqual(self.daemon.wait(timeout=5), 0)
+        self.idle()
+
+    def test_watchdog_exits_after_restore(self):
+        client = self.start_cli()
+        self.active()
+        watcher = self.start_cli("_watch")
+        eventually(lambda: (self.root / "reaper-ready").exists())
+        client.kill(); client.wait()
+        self.idle()
+        self.assertEqual(watcher.wait(timeout=5), 0)
+        self.assertEqual(self.daemon.wait(timeout=5), 0)
+
+    def test_watchdog_recovers_killed_daemon(self):
+        client = self.start_cli()
+        self.active()
+        watcher = self.start_cli("_watch")
+        eventually(lambda: (self.root / "reaper-ready").exists())
+        self.daemon.kill(); self.daemon.wait()
+        self.idle()
+        self.assertEqual(watcher.wait(timeout=5), 0)
+        client.wait(timeout=10)
+
     def test_command_exit_code_and_output(self):
         p = self.run_cli("--", "/bin/sh", "-c", "printf exact-output; exit 37")
         self.assertEqual(p.returncode, 37, p.stderr)
@@ -141,7 +165,7 @@ class Lifecycle(unittest.TestCase):
         client = self.start_cli()
         self.active()
         self.daemon.kill(); self.daemon.wait()
-        self.assertTrue((self.root / "restore").exists())
+        self.assertTrue((self.root / "recovery/restore").exists())
         self.start_daemon()
         self.idle()
         self.assertNotEqual(client.wait(timeout=10), 0)
@@ -163,13 +187,13 @@ class Lifecycle(unittest.TestCase):
         (self.root / "fail-0").touch()
         client.kill(); client.wait()
         eventually(lambda: self.daemon.poll() is not None)
-        self.assertTrue((self.root / "restore").exists())
+        self.assertTrue((self.root / "recovery/restore").exists())
         self.assertEqual(self.power(), 1)
         (self.root / "fail-0").unlink()
         p = self.run_cli("_reap")
         self.assertEqual(p.returncode, 0, p.stderr)
         self.idle()
-        self.assertFalse((self.root / "restore").exists())
+        self.assertFalse((self.root / "recovery/restore").exists())
 
     def test_failed_enable_does_not_run_command(self):
         (self.root / "fail-1").touch()
@@ -179,11 +203,11 @@ class Lifecycle(unittest.TestCase):
         self.idle()
 
     def test_journal_failure_prevents_enable(self):
-        (self.root / "restore").mkdir()
+        (self.root / "recovery/restore").mkdir()
         p = self.run_cli("-t", "1")
         self.assertNotEqual(p.returncode, 0)
         self.idle()
-        (self.root / "restore").rmdir()
+        (self.root / "recovery/restore").rmdir()
 
     def test_idle_status_does_not_change_power(self):
         before = list(self.root.glob("restore*"))
@@ -205,13 +229,13 @@ class Lifecycle(unittest.TestCase):
         p = self.run_cli("-t", "1")
         self.assertNotEqual(p.returncode, 0)
         self.assertEqual(self.power(), 1)
-        self.assertFalse((self.root / "restore").exists())
+        self.assertFalse((self.root / "recovery/restore").exists())
 
     def test_invalid_arguments_have_no_side_effect(self):
         for args in [("-t", "garbage"), ("-w", "-1"), ("-z",), ("-t",)]:
             self.assertEqual(self.run_cli(*args).returncode, 2)
         self.idle()
-        self.assertFalse((self.root / "restore").exists())
+        self.assertFalse((self.root / "recovery/restore").exists())
 
     def test_terminal_close(self):
         master, slave = pty.openpty()

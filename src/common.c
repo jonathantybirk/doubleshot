@@ -35,7 +35,9 @@ void init_paths(void) {
     snprintf(paths.socket, sizeof(paths.socket), "%s/control.sock", run);
     snprintf(paths.heartbeat, sizeof(paths.heartbeat), "%s/heartbeat", run);
     snprintf(paths.lock, sizeof(paths.lock), "%s/writer.lock", state);
-    snprintf(paths.journal, sizeof(paths.journal), "%s/restore", state);
+    snprintf(paths.recovery, sizeof(paths.recovery), "%s/recovery", state);
+    snprintf(paths.journal, sizeof(paths.journal), "%s/restore", paths.recovery);
+    snprintf(paths.ready, sizeof(paths.ready), "%s/reaper-ready", run);
     snprintf(paths.owner, sizeof(paths.owner), "%s/owner", state);
 }
 double now_seconds(void) {
@@ -68,7 +70,10 @@ int read_text(const char *path, char *buffer, size_t size) {
     buffer[n] = 0; return 0;
 }
 int atomic_text(const char *path, const char *text, bool durable) {
-    char tmp[PATH_MAX]; snprintf(tmp, sizeof(tmp), "%s.XXXXXX", path);
+    char tmp[PATH_MAX];
+    /* A killed writer must not leave a temporary file in the recovery queue. */
+    if (!strcmp(path, paths.journal)) snprintf(tmp, sizeof(tmp), "%s/restore.XXXXXX", paths.state);
+    else snprintf(tmp, sizeof(tmp), "%s.XXXXXX", path);
     int fd = mkstemp(tmp); if (fd < 0) return -1;
     fchmod(fd, 0644);
     size_t len = strlen(text), done = 0;

@@ -16,7 +16,7 @@
 #define STALE_SECONDS 15.0
 
 typedef struct { char run[PATH_MAX], state[PATH_MAX], socket[PATH_MAX], lock[PATH_MAX],
-    journal[PATH_MAX], heartbeat[PATH_MAX], owner[PATH_MAX]; } Paths;
+    journal[PATH_MAX], recovery[PATH_MAX], ready[PATH_MAX], heartbeat[PATH_MAX], owner[PATH_MAX]; } Paths;
 extern Paths paths;
 void init_paths(void);
 double now_seconds(void);
@@ -32,6 +32,7 @@ int connect_service(void);
 int request(int fd, const char *line, char *reply, size_t size);
 int daemon_main(void);
 int reaper_main(void);
+int watchdog_main(void);
 int install_main(bool uninstall, uid_t uid);
 int client_main(int argc, char **argv);
 int status_main(bool doctor);

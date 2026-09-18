@@ -62,7 +62,7 @@ int install_main(bool uninstall, uid_t uid) {
         execv(args[0], args); diagnostic("cannot open setup: %s", strerror(errno)); return 1;
     }
     if (!uid) { diagnostic("run install as your ordinary user, or supply --uid"); return 2; }
-    if (secure_directory(paths.state) || secure_directory(paths.run) || secure_directory("/Library/PrivilegedHelperTools") || secure_directory(INSTALL_DIR)) {
+    if (secure_directory(paths.state) || secure_directory(paths.run) || secure_directory(paths.recovery) || secure_directory("/Library/PrivilegedHelperTools") || secure_directory(INSTALL_DIR)) {
         diagnostic("installation directory is not root-controlled"); return 1;
     }
     const char *daemon_plist = "/Library/LaunchDaemons/" LABEL ".plist";
@@ -75,8 +75,8 @@ int install_main(bool uninstall, uid_t uid) {
         if (unlink(daemon_plist) && errno != ENOENT) return 1;
         if (unlink(reaper_plist) && errno != ENOENT) return 1;
         unlink(INSTALLED); rmdir(INSTALL_DIR);
-        unlink(paths.socket); unlink(paths.heartbeat); unlink(paths.owner); unlink(paths.lock);
-        rmdir(paths.run); rmdir(paths.state);
+        unlink(paths.socket); unlink(paths.heartbeat); unlink(paths.ready); unlink(paths.owner); unlink(paths.lock);
+        rmdir(paths.run); rmdir(paths.recovery); rmdir(paths.state);
         puts("Doubleshot: service removed; normal sleep restored."); return 0;
     }
     if (copy_binary(resolved)) { diagnostic("cannot install helper"); return 1; }
@@ -87,19 +87,24 @@ int install_main(bool uninstall, uid_t uid) {
         "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
         "<plist version=\"1.0\"><dict>\n<key>Label</key><string>%s</string>\n"
         "<key>ProgramArguments</key><array><string>%s</string><string>_daemon</string></array>\n"
-        "<key>RunAtLoad</key><true/><key>KeepAlive</key><true/>\n"
+        "<key>Sockets</key><dict><key>Control</key><dict>"
+        "<key>SockPathName</key><string>%s</string>"
+        "<key>SockPathOwner</key><integer>%u</integer>"
+        "<key>SockPathMode</key><integer>384</integer>"
+        "</dict></dict>\n"
         "<key>ThrottleInterval</key><integer>3</integer>\n"
         "<key>ExitTimeOut</key><integer>10</integer>\n"
         "<key>StandardErrorPath</key><string>/var/log/doubleshot.log</string>\n"
-        "</dict></plist>\n", LABEL, INSTALLED);
+        "</dict></plist>\n", LABEL, INSTALLED, paths.socket, uid);
     if (atomic_text(daemon_plist, plist, true)) return 1;
     snprintf(plist, sizeof(plist), "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
         "<plist version=\"1.0\"><dict>\n<key>Label</key><string>%s</string>\n"
-        "<key>ProgramArguments</key><array><string>%s</string><string>_reap</string></array>\n"
-        "<key>RunAtLoad</key><true/><key>StartInterval</key><integer>10</integer>\n"
+        "<key>ProgramArguments</key><array><string>%s</string><string>_watch</string></array>\n"
+        "<key>QueueDirectories</key><array><string>%s</string></array>\n"
+        "<key>ThrottleInterval</key><integer>1</integer>\n"
         "<key>StandardErrorPath</key><string>/var/log/doubleshot.log</string>\n"
-        "</dict></plist>\n", REAPER_LABEL, INSTALLED);
+        "</dict></plist>\n", REAPER_LABEL, INSTALLED, paths.recovery);
     if (atomic_text(reaper_plist, plist, true)) return 1;
     if (bootstrap(reaper_plist) || bootstrap(daemon_plist)) { diagnostic("launchd registration failed; rerun dshot install"); return 1; }
     puts("Doubleshot: helper installed.");

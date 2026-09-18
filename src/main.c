@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
         if (!strcmp(argv[1], "--version")) { puts("Doubleshot " VERSION); return 0; }
         if (!strcmp(argv[1], "--help")) { char *help[] = {argv[0], "-h", NULL}; return client_main(2, help); }
         if (!strcmp(argv[1], "_daemon") && argc == 2) return daemon_main();
+        if (!strcmp(argv[1], "_watch") && argc == 2) return watchdog_main();
         if (!strcmp(argv[1], "_reap") && argc == 2) return reaper_main();
         if ((!strcmp(argv[1], "status") || !strcmp(argv[1], "doctor")) && argc == 2) return status_main(!strcmp(argv[1], "doctor"));
         if (!strcmp(argv[1], "install") || !strcmp(argv[1], "uninstall")) {

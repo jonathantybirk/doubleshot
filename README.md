@@ -28,7 +28,8 @@ dshot -w 12345        # until a process exits
 
 `dshot` accepts caffeinate's `-dimsu`, `-t`, and `-w` options. Multiple sessions
 keep the Mac awake until the last one ends. A launchd service restores sleep
-if a client crashes; a separate recovery job handles a stalled service.
+if a client crashes; a separate recovery job handles a stalled service. Both
+start on demand and exit after normal sleep is restored.
 
 See `man dshot` for options, status, and removal. Build with `make`; test with
 `make test`. [MIT license](LICENSE).
